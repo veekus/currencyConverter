@@ -3,16 +3,14 @@ package com.example.demo;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.Map;
 
 @RestController
 @RequestMapping("/forex")
 @ControllerAdvice
 public class ForexController {
-    private final Map<String, Double> rates = Map.of(
-            "USD:EUR", 0.92,
-            "EUR:USD", 1.09
-    );
+
 
     @GetMapping("/convert")
     public ResponseEntity<String> convert(
@@ -20,28 +18,24 @@ public class ForexController {
             @RequestParam String to,
             @RequestParam double amount) {
         String key = from + ":" + to;
-        Double rate = rates.get(key);
+        Double rate = ForexRates.RATES.get(key);
         if (rate == null) throw new IllegalArgumentException("Unsupported pair");
         return ResponseEntity.ok(amount + " " + from + " " + amount * rate + " "+ to);
     }
 
     @GetMapping("/rates")
-        public ResponseEntity<Map<String, Double>> rates(){
-            Map<String, Double> defaultRates = Map.of(
-                    "GBP", 1.1555,
-                    "USD", 0.8522,
-                    "RUB", 98.966,
-                    "KZT", 637.490,
-                    "RSD", 117.350
-            );
-            if (defaultRates.isEmpty()) throw new RuntimeException("It was the error with rates");
-            return ResponseEntity.ok(defaultRates);
-        }
+    public ResponseEntity<Map<String, Double>> rates(
+            @RequestParam(name = "base", required = false, defaultValue = "EUR") String base
+    ){
+        if (ForexRates.DEFAULT_RATES.isEmpty()) throw new RuntimeException("It was the error with rates");
+        if (!"EUR".equals(base) && ForexRates.DEFAULT_RATES.getOrDefault("EUR:"+base, null) == null) throw new IllegalArgumentException("Unsupported currency");
+        return ResponseEntity.ok(ForexCalculations.getRates(base));
+    }
 
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<Map<String, String>> convertExceptionHandler(){
             Map<String, String> errorMap = Map.of(
-                    "error 3789", "Unsupported pair"
+                    "error 3789", "Unsupported pair or unsupported currency"
             );
             return ResponseEntity.badRequest().body(errorMap);
     }

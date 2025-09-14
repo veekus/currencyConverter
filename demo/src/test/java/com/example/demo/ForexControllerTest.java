@@ -27,14 +27,25 @@ public class ForexControllerTest {
                 .param("from", "AAA")
                 .param("to", "BBB")
                 .param("amount", "1000"))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$['error 3789']").exists());
     }
 
     @Test
     void ratesEndpoint() throws Exception{
         mockMvc.perform(get("/forex/rates"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.USD").exists())
-                .andExpect(jsonPath("$.RSD").value(117.35));
+                .andExpect(jsonPath("$.EUR:USD").exists())
+                .andExpect(jsonPath("$.EUR:RSD").value(117.35));
+
+        mockMvc.perform(get("/forex/rates")
+                .param("base", "RSD"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.RSD:RUB").exists());
+
+        mockMvc.perform(get("/forex/rates")
+                .param("base", "IIIOP"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$['error 3789']").exists());
     }
 }
